@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Love 2048 💕</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="A romantic twist on 2048! Merge hearts to find your soulmate.">
+    <meta name="theme-color" content="#ec4899">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Love 2048">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23ec4899' width='100' height='100' rx='20'/><text x='50' y='65' font-size='50' text-anchor='middle'>💕</text></svg>">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Poppins', sans-serif; }
+        
+        .tile {
+            transition: all 0.15s ease-in-out;
+        }
+        
+        .tile-new {
+            animation: pop 0.2s ease-in-out;
+        }
+        
+        .tile-merged {
+            animation: pulse 0.3s ease-in-out;
+        }
+        
+        @keyframes pop {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+        
+        .game-container {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+        
+        .heart-bg {
+            position: fixed;
+            font-size: 20px;
+            opacity: 0.1;
+            pointer-events: none;
+            animation: float 15s infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+        }
+        
+        /* Prevent pull-to-refresh on mobile */
+        html, body {
+            overscroll-behavior: none;
+            touch-action: pan-x pan-y;
+        }
+        
+        #game-board {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen game-container flex flex-col items-center justify-center p-4 overflow-hidden">
+    <!-- Floating hearts background -->
+    <div id="hearts-bg"></div>
+    
+    <div class="text-center mb-6">
+        <h1 class="text-4xl md:text-5xl font-bold text-pink-600 mb-2">Love 2048 💕</h1>
+        <p class="text-pink-500">Merge hearts to find your soulmate!</p>
+    </div>
+    
+    <div class="flex gap-4 mb-4">
+        <div class="bg-white/80 rounded-xl px-4 py-2 shadow-lg">
+            <div class="text-xs text-pink-400 uppercase">Highest</div>
+            <div id="score" class="text-2xl font-bold text-pink-600">2</div>
+        </div>
+        <div class="bg-white/80 rounded-xl px-4 py-2 shadow-lg">
+            <div class="text-xs text-pink-400 uppercase">Best</div>
+            <div id="best" class="text-2xl font-bold text-pink-600">2</div>
+        </div>
+        <button onclick="resetGame()" class="bg-pink-500 hover:bg-pink-600 text-white rounded-xl px-4 py-2 shadow-lg font-semibold transition-all hover:scale-105">
+            New Game
+        </button>
+        <button id="install-btn" onclick="installApp()" class="hidden bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-4 py-2 shadow-lg font-semibold transition-all hover:scale-105">
+            📲 Install
+        </button>
+    </div>
+    
+    <div id="game-board" class="bg-pink-300/50 rounded-2xl p-3 shadow-2xl backdrop-blur-sm">
+        <div id="grid" class="grid grid-cols-4 gap-3"></div>
+    </div>
+    
+    <div class="mt-6 text-center max-w-2xl">
+        <p class="text-pink-600 font-semibold text-sm mb-3">🎮 Game Flow: Merge same tiles to evolve!</p>
+        <div class="flex flex-wrap justify-center gap-2 text-xs">
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-pink-600">2</span> 👀 Look</span>
+            <span class="text-pink-400">→</span>
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-pink-600">4</span> 😊 Smile</span>
+            <span class="text-pink-400">→</span>
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-pink-600">8</span> 💬 Talk</span>
+            <span class="text-pink-400">→</span>
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-pink-600">16</span> ☕ Date</span>
+            <span class="text-pink-400">→</span>
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-pink-600">32</span> 💕 Crush</span>
+            <span class="text-pink-400">→</span>
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-pink-600">64</span> 💗 Love</span>
+            <span class="text-pink-400">→</span>
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-pink-600">128</span> 💍 Engaged</span>
+            <span class="text-pink-400">→</span>
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-pink-600">256</span> 👰 Married</span>
+            <span class="text-pink-400">→</span>
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-pink-600">512</span> 👨‍👩‍👧 Family</span>
+            <span class="text-pink-400">→</span>
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-pink-600">1024</span> 💞 Soulmates</span>
+            <span class="text-pink-400">→</span>
+            <span class="bg-white/70 px-2 py-1 rounded shadow-sm"><span class="font-bold text-yellow-600">2048</span> ✨ Eternal</span>
+        </div>
+    </div>
+    
+    <!-- Win/Lose Modal -->
+    <div id="modal" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl p-8 text-center max-w-sm mx-4 shadow-2xl">
+            <div id="modal-emoji" class="text-6xl mb-4">💞</div>
+            <h2 id="modal-title" class="text-2xl font-bold text-pink-600 mb-2">You Found True Love!</h2>
+            <p id="modal-message" class="text-gray-600 mb-4">Congratulations! Your love story is complete!</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeModal()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-xl font-semibold transition-all">
+                    Keep Playing
+                </button>
+                <button onclick="closeModal(); resetGame();" class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-xl font-semibold transition-all">
+                    New Story
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Love stages - each stage has emoji, label, and colors
+        const STAGES = [
+            { emoji: '👀', label: 'Look', bg: '#fef3c7', color: '#92400e' },
+            { emoji: '😊', label: 'Smile', bg: '#fde68a', color: '#92400e' },
+            { emoji: '💬', label: 'Talk', bg: '#a7f3d0', color: '#065f46' },
+            { emoji: '☕', label: 'Date', bg: '#bfdbfe', color: '#1e40af' },
+            { emoji: '💕', label: 'Crush', bg: '#fecaca', color: '#dc2626' },
+            { emoji: '💗', label: 'Love', bg: '#fbcfe8', color: '#be185d' },
+            { emoji: '💍', label: 'Engaged', bg: '#c4b5fd', color: '#6d28d9' },
+            { emoji: '👰', label: 'Married', bg: '#f9a8d4', color: '#9d174d' },
+            { emoji: '👨‍👩‍👧', label: 'Family', bg: '#86efac', color: '#166534' },
+            { emoji: '💞', label: 'Soulmates', bg: '#f472b6', color: '#831843' },
+            { emoji: '✨', label: 'Eternal', bg: '#fbbf24', color: '#78350f' }
+        ];
+
+        const SIZE = 4;
+        let grid = [];
+        let score = 0;
+        let best = localStorage.getItem('love2048-best') || 0;
+        let gameOver = false;
+        let won = false;
+
+        // Convert stage number to 2048 value (stage 1 = 2, stage 2 = 4, etc.)
+        function stageToValue(stage) {
+            return Math.pow(2, stage);
+        }
+
+        // Find highest tile value on the grid
+        function getHighestValue() {
+            let maxStage = 0;
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (grid[r][c] > maxStage) {
+                        maxStage = grid[r][c];
+                    }
+                }
+            }
+            return stageToValue(maxStage);
+        }
+
+        // Initialize
+        document.getElementById('best').textContent = best;
+        createFloatingHearts();
+        initGame();
+
+        function createFloatingHearts() {
+            const container = document.getElementById('hearts-bg');
+            const hearts = ['💕', '💗', '💖', '❤️', '💘', '💝'];
+            for (let i = 0; i < 15; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'heart-bg';
+                heart.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+                heart.style.left = Math.random() * 100 + '%';
+                heart.style.top = Math.random() * 100 + '%';
+                heart.style.animationDelay = Math.random() * 5 + 's';
+                container.appendChild(heart);
+            }
+        }
+
+        function initGame() {
+            grid = Array(SIZE).fill(null).map(() => Array(SIZE).fill(0));
+            score = 0;
+            gameOver = false;
+            won = false;
+            updateScore();
+            addRandomTile();
+            addRandomTile();
+            renderGrid();
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        function addRandomTile() {
+            const empty = [];
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (grid[r][c] === 0) empty.push({ r, c });
+                }
+            }
+            if (empty.length > 0) {
+                const { r, c } = empty[Math.floor(Math.random() * empty.length)];
+                grid[r][c] = Math.random() < 0.9 ? 1 : 2; // 90% stage 1, 10% stage 2
+                return { r, c };
+            }
+            return null;
+        }
+
+        function renderGrid() {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'w-16 h-16 md:w-20 md:h-20 rounded-xl flex flex-col items-center justify-center tile';
+                    
+                    if (grid[r][c] > 0) {
+                        const stage = STAGES[grid[r][c] - 1] || STAGES[STAGES.length - 1];
+                        cell.style.backgroundColor = stage.bg;
+                        cell.style.color = stage.color;
+                        cell.innerHTML = `
+                            <span class="text-2xl md:text-3xl">${stage.emoji}</span>
+                            <span class="text-xs font-semibold">${stage.label}</span>
+                        `;
+                    } else {
+                        cell.style.backgroundColor = 'rgba(255,255,255,0.3)';
+                    }
+                    
+                    gridEl.appendChild(cell);
+                }
+            }
+        }
+
+        function updateScore() {
+            score = getHighestValue();
+            document.getElementById('score').textContent = score;
+            if (score > best) {
+                best = score;
+                localStorage.getItem('love2048-best', best);
+                document.getElementById('best').textContent = best;
+            }
+        }
+
+        function slide(row) {
+            let arr = row.filter(v => v !== 0);
+            for (let i = 0; i < arr.length - 1; i++) {
+                if (arr[i] === arr[i + 1]) {
+                    arr[i]++;
+                    arr[i + 1] = 0;
+                    
+                    // Check for win (reaching Soulmates - stage 10)
+                    if (arr[i] >= 10 && !won) {
+                        won = true;
+                        setTimeout(() => showModal(true), 300);
+                    }
+                }
+            }
+            arr = arr.filter(v => v !== 0);
+            while (arr.length < SIZE) arr.push(0);
+            return arr;
+        }
+
+        function move(direction) {
+            if (gameOver) return;
+            
+            let moved = false;
+            const oldGrid = JSON.stringify(grid);
+
+            if (direction === 'left') {
+                for (let r = 0; r < SIZE; r++) {
+                    grid[r] = slide(grid[r]);
+                }
+            } else if (direction === 'right') {
+                for (let r = 0; r < SIZE; r++) {
+                    grid[r] = slide(grid[r].reverse()).reverse();
+                }
+            } else if (direction === 'up') {
+                for (let c = 0; c < SIZE; c++) {
+                    let col = [grid[0][c], grid[1][c], grid[2][c], grid[3][c]];
+                    col = slide(col);
+                    for (let r = 0; r < SIZE; r++) grid[r][c] = col[r];
+                }
+            } else if (direction === 'down') {
+                for (let c = 0; c < SIZE; c++) {
+                    let col = [grid[3][c], grid[2][c], grid[1][c], grid[0][c]];
+                    col = slide(col);
+                    for (let r = 0; r < SIZE; r++) grid[r][c] = col[3 - r];
+                }
+            }
+
+            if (JSON.stringify(grid) !== oldGrid) {
+                moved = true;
+                addRandomTile();
+                updateScore();
+                renderGrid();
+                
+                if (!canMove()) {
+                    gameOver = true;
+                    setTimeout(() => showModal(false), 500);
+                }
+            }
+        }
+
+        function canMove() {
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) {
+                    if (grid[r][c] === 0) return true;
+                    if (c < SIZE - 1 && grid[r][c] === grid[r][c + 1]) return true;
+                    if (r < SIZE - 1 && grid[r][c] === grid[r + 1][c]) return true;
+                }
+            }
+            return false;
+        }
+
+        function showModal(isWin) {
+            const modal = document.getElementById('modal');
+            const emoji = document.getElementById('modal-emoji');
+            const title = document.getElementById('modal-title');
+            const message = document.getElementById('modal-message');
+            
+            if (isWin) {
+                emoji.textContent = '💞';
+                title.textContent = 'You Found True Love!';
+                message.textContent = 'Congratulations! Your love story has reached Soulmates! Keep playing or start a new story.';
+            } else {
+                emoji.textContent = '💔';
+                title.textContent = 'Love Story Ended';
+                message.textContent = 'No more moves available. But don\'t worry, love always finds a way. Try again!';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                const dir = e.key.replace('Arrow', '').toLowerCase();
+                move(dir);
+            }
+        });
+
+        // Touch controls - with prevention for pull-to-refresh
+        let touchStartX = 0, touchStartY = 0;
+        const gameBoard = document.getElementById('game-board');
+        
+        gameBoard.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        gameBoard.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Prevent scrolling/refresh while swiping on game board
+        }, { passive: false });
+
+        gameBoard.addEventListener('touchend', (e) => {
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+            
+            if (Math.max(absDx, absDy) > 30) {
+                e.preventDefault();
+                if (absDx > absDy) {
+                    move(dx > 0 ? 'right' : 'left');
+                } else {
+                    move(dy > 0 ? 'down' : 'up');
+                }
+            }
+        });
+
+        // PWA: Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((reg) => console.log('💕 Service Worker registered!', reg))
+                    .catch((err) => console.log('Service Worker registration failed:', err));
+            });
+        }
+
+        // PWA: Install Prompt
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+        });
+
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('💕 User installed the app!');
+                    }
+                    deferredPrompt = null;
+                    installBtn.classList.add('hidden');
+                });
+            }
+        }
+
+        window.addEventListener('appinstalled', () => {
+            console.log('💕 Love 2048 was installed!');
+            installBtn.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
